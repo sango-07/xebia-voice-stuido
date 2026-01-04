@@ -3,13 +3,15 @@ import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { TemplateCard } from '@/components/templates/TemplateCard';
 import { Button } from '@/components/ui/button';
-import { templates } from '@/data/mockData';
+import { useTemplates } from '@/hooks/useTemplates';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const categories = ['All', 'Banking', 'Insurance', 'Fintech'];
 
 const Templates = () => {
   const [activeCategory, setActiveCategory] = useState('All');
+  const { data: templates = [], isLoading } = useTemplates();
 
   const filteredTemplates = activeCategory === 'All'
     ? templates
@@ -62,11 +64,39 @@ const Templates = () => {
         </motion.div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map((template, index) => (
-            <TemplateCard key={template.id} {...template} delay={0.1 * index} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass-card p-6">
+                <Skeleton className="h-12 w-12 rounded-xl mb-4" />
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3 mb-4" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTemplates.map((template, index) => (
+              <TemplateCard 
+                key={template.id} 
+                id={template.id}
+                name={template.name}
+                description={template.description}
+                category={template.category}
+                icon={template.icon || '🤖'}
+                features={template.features || []}
+                integrations={template.integrations || []}
+                isProductionReady={template.is_production_ready ?? true}
+                delay={0.1 * index} 
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

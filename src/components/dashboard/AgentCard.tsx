@@ -15,6 +15,7 @@ interface AgentCardProps {
   name: string;
   status: 'live' | 'testing' | 'draft';
   category: string;
+  description?: string;
   callsToday: number;
   avgDuration: number;
   satisfaction: number;

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Building, Key, CreditCard, Bell, Save, Upload } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -7,8 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Settings = () => {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [isSaving, setIsSaving] = useState(false);
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'organization', label: 'Organization', icon: Building },
@@ -16,6 +25,41 @@ const Settings = () => {
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ];
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const displayName = profile?.full_name || 'User';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="min-h-screen">
@@ -47,8 +91,8 @@ const Settings = () => {
 
               <div className="flex items-center gap-6 mb-6">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=priya" />
-                  <AvatarFallback>PS</AvatarFallback>
+                  <AvatarImage src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} />
+                  <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div>
                   <Button variant="outline" size="sm">
@@ -60,36 +104,42 @@ const Settings = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>First Name</Label>
-                    <Input defaultValue="Priya" className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label>Last Name</Label>
-                    <Input defaultValue="Sharma" className="mt-1.5" />
-                  </div>
+                <div>
+                  <Label>Full Name</Label>
+                  <Input 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="mt-1.5" 
+                  />
                 </div>
 
                 <div>
                   <Label>Email</Label>
-                  <Input defaultValue="priya.sharma@xebia.com" className="mt-1.5" disabled />
-                  <p className="text-xs text-muted-foreground mt-1">Contact admin to change email</p>
+                  <Input value={user?.email || ''} className="mt-1.5" disabled />
+                  <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
                 </div>
 
                 <div>
                   <Label>Role</Label>
-                  <Input defaultValue="AI Consultant" className="mt-1.5" disabled />
+                  <Input value={profile?.role || 'AI Consultant'} className="mt-1.5" disabled />
                 </div>
 
-                <div>
-                  <Label>Phone</Label>
-                  <Input defaultValue="+91-98765-43210" className="mt-1.5" />
-                </div>
-
-                <Button className="bg-gradient-primary">
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Profile
+                <Button 
+                  className="bg-gradient-primary" 
+                  onClick={handleUpdateProfile}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
+                      <span>Saving...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Update Profile
+                    </>
+                  )}
                 </Button>
               </div>
             </motion.div>
@@ -130,27 +180,21 @@ const Settings = () => {
                 <div>
                   <h4 className="font-medium text-foreground mb-3">Team Members</h4>
                   <div className="space-y-2">
-                    {[
-                      { name: 'Priya Sharma', email: 'priya.sharma@xebia.com', role: 'Admin' },
-                      { name: 'Rahul Kumar', email: 'rahul.kumar@xebia.com', role: 'Developer' },
-                      { name: 'Anita Patel', email: 'anita.patel@xebia.com', role: 'Developer' },
-                    ].map((member, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} />
-                            <AvatarFallback>{member.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{member.name}</p>
-                            <p className="text-xs text-muted-foreground">{member.email}</p>
-                          </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} />
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{displayName}</p>
+                          <p className="text-xs text-muted-foreground">{user?.email}</p>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                          {member.role}
-                        </span>
                       </div>
-                    ))}
+                      <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+                        Admin
+                      </span>
+                    </div>
                   </div>
                   <Button variant="outline" className="mt-3">
                     Invite Member

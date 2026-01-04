@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Save,
@@ -33,17 +33,127 @@ import {
 } from '@/components/ui/select';
 import { connectors } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useAgent, useCreateAgent, useUpdateAgent } from '@/hooks/useAgents';
+import { useTemplate } from '@/hooks/useTemplates';
+import { useToast } from '@/hooks/use-toast';
 
 const AgentBuilder = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get('template');
   const isEditing = !!id;
+  const { toast } = useToast();
 
-  const [agentName, setAgentName] = useState('Balance Inquiry Agent');
-  const [status, setStatus] = useState('draft');
+  const { data: existingAgent } = useAgent(id);
+  const { data: template } = useTemplate(templateId || undefined);
+  const createAgent = useCreateAgent();
+  const updateAgent = useUpdateAgent();
+
+  const [agentName, setAgentName] = useState('New Agent');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<'draft' | 'testing' | 'live'>('draft');
+  const [category, setCategory] = useState<'Banking' | 'Insurance' | 'Fintech'>('Banking');
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [personaName, setPersonaName] = useState('Maya');
+  const [companyName, setCompanyName] = useState('');
   const [personality, setPersonality] = useState('friendly');
   const [verbosity, setVerbosity] = useState([50]);
   const [formality, setFormality] = useState([50]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load existing agent or template data
+  useEffect(() => {
+    if (existingAgent) {
+      setAgentName(existingAgent.name);
+      setDescription(existingAgent.description || '');
+      setStatus(existingAgent.status);
+      setCategory(existingAgent.category);
+      setSystemPrompt(existingAgent.system_prompt || '');
+      setPersonaName(existingAgent.persona_name || 'Maya');
+      setCompanyName(existingAgent.company_name || '');
+    } else if (template) {
+      setAgentName(template.name);
+      setDescription(template.description);
+      setCategory(template.category);
+      setSystemPrompt(`You are ${personaName}, an AI assistant. ${template.description}`);
+    }
+  }, [existingAgent, template]);
+
+  const handleSave = async () => {
+    if (!agentName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an agent name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (isEditing && id) {
+        await updateAgent.mutateAsync({
+          id,
+          name: agentName,
+          description,
+          status,
+          category,
+          system_prompt: systemPrompt,
+          persona_name: personaName,
+          company_name: companyName,
+        });
+      } else {
+        await createAgent.mutateAsync({
+          name: agentName,
+          description,
+          status,
+          category,
+          system_prompt: systemPrompt,
+          persona_name: personaName,
+          company_name: companyName,
+        });
+        navigate('/agents');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeploy = async () => {
+    setIsSaving(true);
+    try {
+      if (isEditing && id) {
+        await updateAgent.mutateAsync({
+          id,
+          name: agentName,
+          description,
+          status: 'live',
+          category,
+          system_prompt: systemPrompt,
+          persona_name: personaName,
+          company_name: companyName,
+        });
+      } else {
+        await createAgent.mutateAsync({
+          name: agentName,
+          description,
+          status: 'live',
+          category,
+          system_prompt: systemPrompt,
+          persona_name: personaName,
+          company_name: companyName,
+        });
+      }
+      toast({
+        title: 'Agent deployed!',
+        description: 'Your agent is now live and ready to take calls.',
+      });
+      navigate('/agents');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const tabs = [
     { id: 'instructions', label: 'Instructions', icon: Settings },
@@ -73,28 +183,32 @@ const AgentBuilder = () => {
               onChange={(e) => setAgentName(e.target.value)}
               className="text-xl font-semibold bg-transparent border-none h-auto p-0 focus-visible:ring-0 w-64"
             />
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(val) => setStatus(val as 'draft' | 'testing' | 'live')}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="testing">Testing</SelectItem>
-                <SelectItem value="production">Production</SelectItem>
+                <SelectItem value="live">Live</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Save className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground mr-2"></div>
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Save Draft
             </Button>
             <Button variant="secondary">
               <Play className="h-4 w-4 mr-2" />
               Test Agent
             </Button>
-            <Button className="bg-gradient-primary">
+            <Button className="bg-gradient-primary" onClick={handleDeploy} disabled={isSaving}>
               <Rocket className="h-4 w-4 mr-2" />
               Deploy
             </Button>
@@ -131,12 +245,44 @@ const AgentBuilder = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Agent Name</Label>
-                    <Input placeholder="Maya" defaultValue="Maya" className="mt-1.5" />
+                    <Input 
+                      placeholder="Maya" 
+                      value={personaName}
+                      onChange={(e) => setPersonaName(e.target.value)}
+                      className="mt-1.5" 
+                    />
                   </div>
                   <div>
                     <Label>Bank/Company Name</Label>
-                    <Input placeholder="HDFC Bank" defaultValue="HDFC Bank" className="mt-1.5" />
+                    <Input 
+                      placeholder="HDFC Bank" 
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="mt-1.5" 
+                    />
                   </div>
+                </div>
+                <div className="mt-4">
+                  <Label>Category</Label>
+                  <Select value={category} onValueChange={(val) => setCategory(val as 'Banking' | 'Insurance' | 'Fintech')}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Banking">Banking</SelectItem>
+                      <SelectItem value="Insurance">Insurance</SelectItem>
+                      <SelectItem value="Fintech">Fintech</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="mt-4">
+                  <Label>Description</Label>
+                  <Textarea 
+                    placeholder="Describe what this agent does..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="mt-1.5 min-h-20"
+                  />
                 </div>
               </motion.div>
 
@@ -150,10 +296,12 @@ const AgentBuilder = () => {
                 <h3 className="text-lg font-semibold text-foreground mb-4">System Instructions</h3>
                 <Textarea
                   className="min-h-40 font-mono text-sm"
-                  defaultValue={`You are Maya, an AI assistant for HDFC Bank. Help customers with balance inquiries. Always authenticate first using phone number and date of birth. Be professional yet friendly. Respond in the same language as the customer speaks.`}
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  placeholder="You are Maya, an AI assistant..."
                 />
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">245 / 2000 characters</span>
+                  <span className="text-xs text-muted-foreground">{systemPrompt.length} / 2000 characters</span>
                   <Select>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Insert Variable" />

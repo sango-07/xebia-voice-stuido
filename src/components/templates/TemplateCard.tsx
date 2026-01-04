@@ -11,7 +11,7 @@ interface TemplateCardProps {
   description: string;
   features: string[];
   integrations: string[];
-  status: string;
+  isProductionReady?: boolean;
   delay?: number;
 }
 
@@ -23,7 +23,7 @@ export const TemplateCard = ({
   description,
   features,
   integrations,
-  status,
+  isProductionReady = true,
   delay = 0,
 }: TemplateCardProps) => {
   const navigate = useNavigate();
@@ -76,7 +76,7 @@ export const TemplateCard = ({
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs text-success flex items-center gap-1">
             <Check className="h-3 w-3" />
-            {status}
+            {isProductionReady ? 'Production Ready' : 'In Development'}
           </span>
         </div>
         <div className="flex gap-2">

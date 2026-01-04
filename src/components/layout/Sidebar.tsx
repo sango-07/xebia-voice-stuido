@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,20 @@ const navItems = [
 export const Sidebar = () => {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
+  const { profile, signOut } = useAuth();
+
+  const displayName = profile?.full_name || 'User';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+  const role = profile?.role || 'AI Consultant';
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <motion.aside
@@ -94,26 +109,27 @@ export const Sidebar = () => {
           <div className="glass-card p-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=priya" />
-                <AvatarFallback>PS</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} />
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-foreground truncate">Priya Sharma</p>
-                <p className="text-xs text-muted-foreground truncate">AI Consultant</p>
+                <p className="font-medium text-sm text-foreground truncate">{displayName}</p>
+                <p className="text-xs text-muted-foreground truncate">{role}</p>
               </div>
             </div>
           </div>
         ) : (
           <div className="flex justify-center">
             <Avatar className="h-10 w-10">
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=priya" />
-              <AvatarFallback>PS</AvatarFallback>
+              <AvatarImage src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} />
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </div>
         )}
 
         <Button
           variant="ghost"
+          onClick={handleSignOut}
           className={cn(
             'w-full mt-3 text-muted-foreground hover:text-foreground',
             sidebarCollapsed && 'px-0 justify-center'
