@@ -15,12 +15,27 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { LiveCallCard } from '@/components/dashboard/LiveCallCard';
 import { AgentCard } from '@/components/dashboard/AgentCard';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAgents } from '@/hooks/useAgents';
+import { useCallAnalytics } from '@/hooks/useCallLogs';
 import { useAppStore } from '@/store/appStore';
 import { callVolumeData, activityLog } from '@/data/mockData';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { agents, liveCalls } = useAppStore();
+  const { profile } = useAuth();
+  const { data: agents = [], isLoading: agentsLoading } = useAgents();
+  const { data: analytics } = useCallAnalytics();
+  const { liveCalls } = useAppStore();
+
+  const displayName = profile?.full_name?.split(' ')[0] || 'there';
+  const liveAgents = agents.filter(a => a.status === 'live');
+  const testingAgents = agents.filter(a => a.status === 'testing');
+
+  // Use real analytics or fallback to mock data
+  const totalCalls = analytics?.totalCalls ?? 127;
+  const containmentRate = analytics?.containmentRate ?? 94;
+  const costSaved = analytics?.totalCost ? Math.round((analytics.totalCost * 30)) : 30734;
 
   return (
     <div className="min-h-screen">
@@ -33,11 +48,11 @@ const Dashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl bg-gradient-primary p-8"
         >
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle,_white_1px,_transparent_1px)] bg-[size:20px_20px]" />
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle,_white_1px,_transparent_1px)] bg-[size:20px_20px]" />
           <div className="relative z-10">
-            <h2 className="text-3xl font-bold text-primary-foreground mb-2">Welcome back, Priya! 👋</h2>
+            <h2 className="text-3xl font-bold text-primary-foreground mb-2">Welcome back, {displayName}! 👋</h2>
             <p className="text-primary-foreground/80 text-lg mb-6">
-              You have {agents.filter(a => a.status === 'live').length} active agents handling 127 calls today
+              You have {liveAgents.length} active agent{liveAgents.length !== 1 ? 's' : ''} handling {totalCalls} calls today
             </p>
             <div className="flex gap-3">
               <Button
@@ -66,7 +81,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Total Calls Today"
-            value="127"
+            value={totalCalls.toString()}
             trend="+12% from yesterday"
             trendUp={true}
             icon={<Phone className="h-6 w-6" />}
@@ -74,14 +89,14 @@ const Dashboard = () => {
           />
           <MetricCard
             title="Active Agents"
-            value="3"
-            trend="2 in production, 1 in testing"
+            value={agents.length.toString()}
+            trend={`${liveAgents.length} in production, ${testingAgents.length} in testing`}
             icon={<Bot className="h-6 w-6" />}
             delay={0.2}
           />
           <MetricCard
             title="Containment Rate"
-            value="94%"
+            value={`${containmentRate}%`}
             trend="+3% from last week"
             trendUp={true}
             icon={<Target className="h-6 w-6" />}
@@ -89,7 +104,7 @@ const Dashboard = () => {
           />
           <MetricCard
             title="Cost Saved Today"
-            value="₹30,734"
+            value={`₹${costSaved.toLocaleString('en-IN')}`}
             trend="96% savings vs human agents"
             trendUp={true}
             icon={<IndianRupee className="h-6 w-6" />}
@@ -111,9 +126,15 @@ const Dashboard = () => {
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {liveCalls.map((call) => (
-              <LiveCallCard key={call.id} {...call} />
-            ))}
+            {liveCalls.length > 0 ? (
+              liveCalls.map((call) => (
+                <LiveCallCard key={call.id} {...call} />
+              ))
+            ) : (
+              <p className="text-muted-foreground col-span-2 text-center py-8">
+                No live calls at the moment
+              </p>
+            )}
           </div>
         </motion.div>
 
@@ -174,7 +195,7 @@ const Dashboard = () => {
           >
             <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
             <div className="space-y-4">
-              {activityLog.map((activity, index) => (
+              {activityLog.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start gap-3 pb-3 border-b border-border last:border-0"
@@ -202,11 +223,45 @@ const Dashboard = () => {
               View All
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {agents.map((agent, index) => (
-              <AgentCard key={agent.id} {...agent} delay={0.1 * index} />
-            ))}
-          </div>
+          {agentsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass-card p-6 animate-pulse">
+                  <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          ) : agents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {agents.slice(0, 3).map((agent, index) => (
+                <AgentCard
+                  key={agent.id}
+                  id={agent.id}
+                  name={agent.name}
+                  status={agent.status}
+                  category={agent.category}
+                  description={agent.description || ''}
+                  callsToday={0}
+                  avgDuration={0}
+                  satisfaction={0}
+                  delay={0.1 * index}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card p-8 text-center">
+              <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-foreground mb-2">No agents yet</h4>
+              <p className="text-muted-foreground mb-4">
+                Create your first AI voice agent to get started
+              </p>
+              <Button onClick={() => navigate('/templates')} className="bg-gradient-primary">
+                Browse Templates
+              </Button>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
