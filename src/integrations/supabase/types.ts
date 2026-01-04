@@ -14,16 +14,254 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          category: Database["public"]["Enums"]["agent_category"]
+          company_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          languages: string[] | null
+          name: string
+          persona_name: string | null
+          status: Database["public"]["Enums"]["agent_status"]
+          system_prompt: string | null
+          updated_at: string
+          user_id: string
+          voice_accent: string | null
+          voice_gender: string | null
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["agent_category"]
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          languages?: string[] | null
+          name: string
+          persona_name?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          system_prompt?: string | null
+          updated_at?: string
+          user_id: string
+          voice_accent?: string | null
+          voice_gender?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["agent_category"]
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          languages?: string[] | null
+          name?: string
+          persona_name?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          system_prompt?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_accent?: string | null
+          voice_gender?: string | null
+        }
+        Relationships: []
+      }
+      call_logs: {
+        Row: {
+          agent_id: string
+          cost_rupees: number | null
+          created_at: string
+          customer_phone: string | null
+          duration_seconds: number | null
+          id: string
+          intent: string | null
+          language: string | null
+          outcome: Database["public"]["Enums"]["call_outcome"] | null
+          sentiment: Database["public"]["Enums"]["call_sentiment"] | null
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          cost_rupees?: number | null
+          created_at?: string
+          customer_phone?: string | null
+          duration_seconds?: number | null
+          id?: string
+          intent?: string | null
+          language?: string | null
+          outcome?: Database["public"]["Enums"]["call_outcome"] | null
+          sentiment?: Database["public"]["Enums"]["call_sentiment"] | null
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          cost_rupees?: number | null
+          created_at?: string
+          customer_phone?: string | null
+          duration_seconds?: number | null
+          id?: string
+          intent?: string | null
+          language?: string | null
+          outcome?: Database["public"]["Enums"]["call_outcome"] | null
+          sentiment?: Database["public"]["Enums"]["call_sentiment"] | null
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_documents: {
+        Row: {
+          agent_id: string
+          chunks_count: number | null
+          created_at: string
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          agent_id: string
+          chunks_count?: number | null
+          created_at?: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          agent_id?: string
+          chunks_count?: number | null
+          created_at?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_documents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          category: Database["public"]["Enums"]["agent_category"]
+          created_at: string
+          description: string
+          features: string[] | null
+          icon: string | null
+          id: string
+          integrations: string[] | null
+          is_production_ready: boolean | null
+          name: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["agent_category"]
+          created_at?: string
+          description: string
+          features?: string[] | null
+          icon?: string | null
+          id?: string
+          integrations?: string[] | null
+          is_production_ready?: boolean | null
+          name: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["agent_category"]
+          created_at?: string
+          description?: string
+          features?: string[] | null
+          icon?: string | null
+          id?: string
+          integrations?: string[] | null
+          is_production_ready?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      agent_category: "Banking" | "Insurance" | "Fintech"
+      agent_status: "live" | "testing" | "draft"
+      app_role: "admin" | "user"
+      call_outcome: "resolved" | "escalated" | "abandoned"
+      call_sentiment: "positive" | "neutral" | "negative"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +388,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      agent_category: ["Banking", "Insurance", "Fintech"],
+      agent_status: ["live", "testing", "draft"],
+      app_role: ["admin", "user"],
+      call_outcome: ["resolved", "escalated", "abandoned"],
+      call_sentiment: ["positive", "neutral", "negative"],
+    },
   },
 } as const
