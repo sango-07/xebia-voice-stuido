@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { useAgent, useCreateAgent, useUpdateAgent } from '@/hooks/useAgents';
 import { useTemplate } from '@/hooks/useTemplates';
 import { useToast } from '@/hooks/use-toast';
+import { VoiceAgentModal } from '@/components/voice/VoiceAgentModal';
 
 const AgentBuilder = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const AgentBuilder = () => {
   const [verbosity, setVerbosity] = useState([50]);
   const [formality, setFormality] = useState([50]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   // Load existing agent or template data
   useEffect(() => {
@@ -204,7 +206,7 @@ const AgentBuilder = () => {
               )}
               Save Draft
             </Button>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => id && setIsTestModalOpen(true)} disabled={!id}>
               <Play className="h-4 w-4 mr-2" />
               Test Agent
             </Button>
@@ -986,6 +988,17 @@ const AgentBuilder = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Voice Test Modal */}
+      {id && (
+        <VoiceAgentModal
+          isOpen={isTestModalOpen}
+          onClose={() => setIsTestModalOpen(false)}
+          agentId={id}
+          agentName={agentName}
+          personaName={personaName}
+        />
+      )}
     </div>
   );
 };

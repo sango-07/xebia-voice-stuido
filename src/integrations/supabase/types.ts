@@ -243,6 +243,65 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_sessions: {
+        Row: {
+          agent_id: string
+          created_at: string
+          customer_phone: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          intent: string | null
+          language: string | null
+          room_name: string
+          sentiment: string | null
+          started_at: string
+          status: string
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          customer_phone?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          intent?: string | null
+          language?: string | null
+          room_name: string
+          sentiment?: string | null
+          started_at?: string
+          status?: string
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          customer_phone?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          intent?: string | null
+          language?: string | null
+          room_name?: string
+          sentiment?: string | null
+          started_at?: string
+          status?: string
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_sessions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

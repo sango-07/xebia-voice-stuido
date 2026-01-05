@@ -1,1 +1,7 @@
 project_id = "abchswrcdrpvublnfpla"
+
+[functions.livekit-token]
+verify_jwt = false
+
+[functions.end-voice-session]
+verify_jwt = false
