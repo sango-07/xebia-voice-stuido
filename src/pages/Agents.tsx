@@ -56,6 +56,7 @@ const Agents = () => {
                 status={agent.status}
                 category={agent.category}
                 description={agent.description || ''}
+                personaName={agent.persona_name || undefined}
                 callsToday={0}
                 avgDuration={0}
                 satisfaction={0}

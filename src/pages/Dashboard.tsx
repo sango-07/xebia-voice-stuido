@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAgents } from '@/hooks/useAgents';
 import { useCallAnalytics } from '@/hooks/useCallLogs';
-import { useAppStore } from '@/store/appStore';
+import { useLiveCalls } from '@/hooks/useLiveCalls';
 import { callVolumeData, activityLog } from '@/data/mockData';
 
 const Dashboard = () => {
@@ -26,7 +26,7 @@ const Dashboard = () => {
   const { profile } = useAuth();
   const { data: agents = [], isLoading: agentsLoading } = useAgents();
   const { data: analytics } = useCallAnalytics();
-  const { liveCalls } = useAppStore();
+  const { liveCalls } = useLiveCalls();
 
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
   const liveAgents = agents.filter(a => a.status === 'live');
@@ -243,6 +243,7 @@ const Dashboard = () => {
                   status={agent.status}
                   category={agent.category}
                   description={agent.description || ''}
+                  personaName={agent.persona_name || undefined}
                   callsToday={0}
                   avgDuration={0}
                   satisfaction={0}
