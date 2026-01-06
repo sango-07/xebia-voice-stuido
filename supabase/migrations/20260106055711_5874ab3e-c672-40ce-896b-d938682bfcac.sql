@@ -1,0 +1,10 @@
+-- Seed templates table with production-ready voice agent templates
+INSERT INTO public.templates (name, description, category, icon, features, integrations, is_production_ready)
+VALUES 
+  ('Balance Inquiry Agent', 'Help customers check account balances instantly. Handles authentication, balance queries, and transaction history.', 'Banking', '💰', ARRAY['Multi-language support', 'Automated authentication', 'CRM integration ready', 'Compliance built-in'], ARRAY['Finacle', 'TCS BaNCS'], true),
+  ('Payment Collection Agent', 'Automated payment reminders and collection. Empathetic approach with flexible payment plans.', 'Banking', '💳', ARRAY['Payment scheduling', 'EMI calculator', 'Multi-channel follow-up', 'Payment gateway integration'], ARRAY['Finacle', 'Razorpay', 'Twilio'], true),
+  ('Loan Status Agent', 'Check loan application status, eligibility, and required documents. Guides customers through the process.', 'Banking', '🏠', ARRAY['Application tracking', 'Document verification', 'Eligibility check', 'EMI calculation'], ARRAY['Finacle', 'Document Management'], true),
+  ('Claims Status Agent', 'Help policyholders track claim status and upload documents. Empathetic handling of sensitive situations.', 'Insurance', '🛡️', ARRAY['Claim tracking', 'Document upload', 'Status notifications', 'Escalation handling'], ARRAY['Guidewire', 'Duck Creek'], true),
+  ('Policy Renewal Agent', 'Proactive policy renewal reminders. Highlights benefits and processes renewals seamlessly.', 'Insurance', '📋', ARRAY['Auto-reminders', 'Premium calculation', 'Coverage comparison', 'Instant renewal'], ARRAY['Policy Management', 'Payment Gateway'], true),
+  ('KYC Verification Agent', 'Guide customers through KYC verification. Collects Aadhaar, PAN, and address proof with clear instructions.', 'Fintech', '🔍', ARRAY['Aadhaar verification', 'PAN validation', 'Address proof', 'Video KYC'], ARRAY['Aadhaar API', 'DigiLocker'], true)
+ON CONFLICT DO NOTHING;
