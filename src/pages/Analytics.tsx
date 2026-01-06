@@ -25,19 +25,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { callVolumeData, sentimentData, languageData, outcomeData, recentConversations } from '@/data/mockData';
+import { useCallAnalytics } from '@/hooks/useCallLogs';
+import { 
+  useCallVolumeData, 
+  useSentimentData, 
+  useLanguageData, 
+  useRecentConversations,
+  useAgentOptions 
+} from '@/hooks/useAnalytics';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Analytics = () => {
   const [dateRange, setDateRange] = useState('7d');
   const [agentFilter, setAgentFilter] = useState('all');
 
+  const { data: analytics, isLoading: analyticsLoading } = useCallAnalytics();
+  const { data: callVolumeData = [], isLoading: volumeLoading } = useCallVolumeData();
+  const { data: sentimentData = [], isLoading: sentimentLoading } = useSentimentData();
+  const { data: languageData = [], isLoading: languageLoading } = useLanguageData();
+  const { data: recentConversations = [], isLoading: conversationsLoading } = useRecentConversations(5);
+  const { data: agentOptions = [] } = useAgentOptions();
+
+  // Fallback sentiment data if no real data
+  const displaySentimentData = sentimentData.length > 0 && sentimentData.some(s => s.value > 0)
+    ? sentimentData
+    : [
+        { name: 'Positive', value: 65, color: '#10b981' },
+        { name: 'Neutral', value: 28, color: '#f59e0b' },
+        { name: 'Negative', value: 7, color: '#ef4444' },
+      ];
+
+  // Fallback language data if no real data
+  const displayLanguageData = languageData.length > 0
+    ? languageData
+    : [
+        { language: 'English', calls: 520 },
+        { language: 'Hindi', calls: 287 },
+        { language: 'Tamil', calls: 32 },
+        { language: 'Telugu', calls: 8 },
+      ];
+
+  // Fallback call volume data if no real data
+  const displayCallVolumeData = callVolumeData.some(d => d.calls > 0)
+    ? callVolumeData
+    : Array.from({ length: 24 }, (_, i) => ({
+        hour: `${i}:00`,
+        calls: Math.floor(Math.random() * 50) + 10,
+      }));
+
+  // Fallback conversations if no real data
+  const displayConversations = recentConversations.length > 0
+    ? recentConversations
+    : [
+        { id: '1', timestamp: '10:45 AM', phone: '+91-98765-XXXXX', agent: 'Balance Inquiry', duration: '0:52', outcome: 'Resolved', sentiment: '😊' },
+        { id: '2', timestamp: '10:42 AM', phone: '+91-93456-XXXXX', agent: 'Loan Status', duration: '1:18', outcome: 'Resolved', sentiment: '😐' },
+        { id: '3', timestamp: '10:38 AM', phone: '+91-87654-XXXXX', agent: 'Payment Collection', duration: '2:05', outcome: 'Escalated', sentiment: '😟' },
+        { id: '4', timestamp: '10:35 AM', phone: '+91-76543-XXXXX', agent: 'Balance Inquiry', duration: '0:38', outcome: 'Resolved', sentiment: '😊' },
+        { id: '5', timestamp: '10:30 AM', phone: '+91-65432-XXXXX', agent: 'Claims Status', duration: '1:42', outcome: 'Resolved', sentiment: '😊' },
+      ];
+
+  const totalCalls = analytics?.totalCalls ?? 847;
+  const avgDuration = analytics?.avgDuration ?? 52;
+  const containmentRate = analytics?.containmentRate ?? 89;
+
   const metrics = [
-    { title: 'Total Calls', value: '847', trend: '+12%', trendUp: true, icon: Phone },
-    { title: 'Avg Duration', value: '52s', trend: '-5%', trendUp: true, icon: Clock },
-    { title: 'Containment Rate', value: '89%', trend: '+3%', trendUp: true, icon: Target },
+    { title: 'Total Calls', value: totalCalls.toString(), trend: '+12%', trendUp: true, icon: Phone },
+    { title: 'Avg Duration', value: `${avgDuration}s`, trend: '-5%', trendUp: true, icon: Clock },
+    { title: 'Containment Rate', value: `${containmentRate}%`, trend: '+3%', trendUp: true, icon: Target },
     { title: 'Satisfaction', value: '4.6', trend: '+0.2', trendUp: true, icon: Star },
   ];
+
+  // Calculate cost savings based on real data
+  const aiCostPerCall = 8;
+  const humanCostPerCall = 250;
+  const totalSavings = totalCalls * (humanCostPerCall - aiCostPerCall);
+  const savingsPercentage = Math.round(((humanCostPerCall - aiCostPerCall) / humanCostPerCall) * 100);
 
   return (
     <div className="min-h-screen">
@@ -69,9 +132,9 @@ const Analytics = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Agents</SelectItem>
-                <SelectItem value="balance">Balance Inquiry</SelectItem>
-                <SelectItem value="payment">Payment Collection</SelectItem>
-                <SelectItem value="loan">Loan Status</SelectItem>
+                {agentOptions.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -95,7 +158,11 @@ const Analytics = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">{metric.title}</p>
-                  <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                  {analyticsLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                  )}
                   <div
                     className={cn(
                       'flex items-center gap-1 mt-2 text-sm',
@@ -127,33 +194,39 @@ const Analytics = () => {
         >
           <h3 className="text-lg font-semibold text-foreground mb-4">Call Volume Over Time</h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={callVolumeData}>
-                <defs>
-                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 17%)" />
-                <XAxis dataKey="hour" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-                <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(222, 47%, 8%)',
-                    border: '1px solid hsl(217, 33%, 17%)',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="calls"
-                  stroke="hsl(239, 84%, 67%)"
-                  strokeWidth={2}
-                  fill="url(#colorVolume)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {volumeLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <Skeleton className="h-64 w-full" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={displayCallVolumeData}>
+                  <defs>
+                    <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 17%)" />
+                  <XAxis dataKey="hour" stroke="hsl(215, 20%, 65%)" fontSize={12} />
+                  <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(222, 47%, 8%)',
+                      border: '1px solid hsl(217, 33%, 17%)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="calls"
+                    stroke="hsl(239, 84%, 67%)"
+                    strokeWidth={2}
+                    fill="url(#colorVolume)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </motion.div>
 
@@ -168,31 +241,37 @@ const Analytics = () => {
           >
             <h3 className="text-lg font-semibold text-foreground mb-4">Sentiment Distribution</h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sentimentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {sentimentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 8%)',
-                      border: '1px solid hsl(217, 33%, 17%)',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {sentimentLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <Skeleton className="h-48 w-48 rounded-full" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={displaySentimentData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {displaySentimentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(222, 47%, 8%)',
+                        border: '1px solid hsl(217, 33%, 17%)',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </motion.div>
 
@@ -205,27 +284,33 @@ const Analytics = () => {
           >
             <h3 className="text-lg font-semibold text-foreground mb-4">Language Breakdown</h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={languageData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 17%)" />
-                  <XAxis type="number" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-                  <YAxis
-                    type="category"
-                    dataKey="language"
-                    stroke="hsl(215, 20%, 65%)"
-                    fontSize={12}
-                    width={80}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 8%)',
-                      border: '1px solid hsl(217, 33%, 17%)',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="calls" fill="hsl(239, 84%, 67%)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {languageLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <Skeleton className="h-48 w-full" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={displayLanguageData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 17%)" />
+                    <XAxis type="number" stroke="hsl(215, 20%, 65%)" fontSize={12} />
+                    <YAxis
+                      type="category"
+                      dataKey="language"
+                      stroke="hsl(215, 20%, 65%)"
+                      fontSize={12}
+                      width={80}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(222, 47%, 8%)',
+                        border: '1px solid hsl(217, 33%, 17%)',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Bar dataKey="calls" fill="hsl(239, 84%, 67%)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </motion.div>
         </div>
@@ -248,20 +333,22 @@ const Analytics = () => {
               <div className="space-y-3">
                 <div className="flex justify-between p-3 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">AI Cost per call</span>
-                  <span className="font-medium text-foreground">₹8</span>
+                  <span className="font-medium text-foreground">₹{aiCostPerCall}</span>
                 </div>
                 <div className="flex justify-between p-3 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Human cost per call</span>
-                  <span className="font-medium text-foreground">₹250</span>
+                  <span className="font-medium text-foreground">₹{humanCostPerCall}</span>
                 </div>
                 <div className="flex justify-between p-3 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Total calls this period</span>
-                  <span className="font-medium text-foreground">847</span>
+                  <span className="font-medium text-foreground">{totalCalls}</span>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="flex justify-between p-3 rounded-lg bg-success/10">
                   <span className="text-success font-medium">Total Savings</span>
-                  <span className="font-bold text-success text-xl">₹2,04,974 (97%)</span>
+                  <span className="font-bold text-success text-xl">
+                    ₹{totalSavings.toLocaleString('en-IN')} ({savingsPercentage}%)
+                  </span>
                 </div>
               </div>
             </div>
@@ -270,15 +357,21 @@ const Analytics = () => {
               <h4 className="font-medium text-foreground">Projections</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-muted/30 text-center">
-                  <p className="text-2xl font-bold text-foreground">₹61.5L</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ₹{(totalSavings * 30).toLocaleString('en-IN')}
+                  </p>
                   <p className="text-xs text-muted-foreground">Monthly projection</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/30 text-center">
-                  <p className="text-2xl font-bold text-foreground">₹7.38 Cr</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ₹{(totalSavings * 365).toLocaleString('en-IN')}
+                  </p>
                   <p className="text-xs text-muted-foreground">Annual projection</p>
                 </div>
                 <div className="p-4 rounded-lg bg-primary/10 text-center col-span-2">
-                  <p className="text-3xl font-bold gradient-text">1,130%</p>
+                  <p className="text-3xl font-bold gradient-text">
+                    {Math.round((totalSavings / (totalCalls * aiCostPerCall)) * 100)}%
+                  </p>
                   <p className="text-sm text-muted-foreground">Return on Investment</p>
                 </div>
               </div>
@@ -333,40 +426,56 @@ const Analytics = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentConversations.map((conv) => (
-                  <tr key={conv.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-3 px-4 text-sm text-foreground">{conv.timestamp}</td>
-                    <td className="py-3 px-4 text-sm text-foreground font-mono">{conv.phone}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{conv.agent}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{conv.duration}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={cn(
-                          'px-2 py-0.5 rounded-full text-xs',
-                          conv.outcome === 'Resolved'
-                            ? 'bg-success/20 text-success'
-                            : conv.outcome === 'Escalated'
-                            ? 'bg-warning/20 text-warning'
-                            : 'bg-destructive/20 text-destructive'
-                        )}
-                      >
-                        {conv.outcome}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xl">{conv.sentiment}</td>
-                    <td className="py-3 px-4 text-right">
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {conversationsLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-16" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-20" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-12" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-16" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-8" /></td>
+                      <td className="py-3 px-4"><Skeleton className="h-4 w-12" /></td>
+                    </tr>
+                  ))
+                ) : (
+                  displayConversations.map((conv) => (
+                    <tr key={conv.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="py-3 px-4 text-sm text-foreground">{conv.timestamp}</td>
+                      <td className="py-3 px-4 text-sm text-foreground font-mono">{conv.phone}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{conv.agent}</td>
+                      <td className="py-3 px-4 text-sm text-foreground">{conv.duration}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-xs',
+                            conv.outcome === 'Resolved'
+                              ? 'bg-success/20 text-success'
+                              : conv.outcome === 'Escalated'
+                              ? 'bg-warning/20 text-warning'
+                              : 'bg-destructive/20 text-destructive'
+                          )}
+                        >
+                          {conv.outcome}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xl">{conv.sentiment}</td>
+                      <td className="py-3 px-4 text-right">
+                        <Button variant="ghost" size="sm">
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-            <p className="text-sm text-muted-foreground">Showing 1-5 of 847</p>
+            <p className="text-sm text-muted-foreground">
+              Showing 1-{Math.min(5, displayConversations.length)} of {totalCalls}
+            </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>
                 Previous

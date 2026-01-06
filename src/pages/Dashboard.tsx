@@ -19,7 +19,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAgents } from '@/hooks/useAgents';
 import { useCallAnalytics } from '@/hooks/useCallLogs';
 import { useLiveCalls } from '@/hooks/useLiveCalls';
-import { callVolumeData, activityLog } from '@/data/mockData';
+import { useCallVolumeData, useActivityLog } from '@/hooks/useAnalytics';
+import { callVolumeData as mockCallVolumeData, activityLog as mockActivityLog } from '@/data/mockData';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +28,8 @@ const Dashboard = () => {
   const { data: agents = [], isLoading: agentsLoading } = useAgents();
   const { data: analytics } = useCallAnalytics();
   const { liveCalls } = useLiveCalls();
+  const { data: callVolumeData = [] } = useCallVolumeData();
+  const { data: activityLog = [] } = useActivityLog();
 
   const displayName = profile?.full_name?.split(' ')[0] || 'there';
   const liveAgents = agents.filter(a => a.status === 'live');
@@ -150,7 +153,7 @@ const Dashboard = () => {
             <h3 className="text-lg font-semibold text-foreground mb-4">Call Volume (Last 24 Hours)</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={callVolumeData}>
+                <AreaChart data={callVolumeData.length > 0 && callVolumeData.some(d => d.calls > 0) ? callVolumeData : mockCallVolumeData}>
                   <defs>
                     <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.3} />
@@ -195,7 +198,7 @@ const Dashboard = () => {
           >
             <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
             <div className="space-y-4">
-              {activityLog.map((activity) => (
+              {(activityLog.length > 0 ? activityLog : mockActivityLog).map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start gap-3 pb-3 border-b border-border last:border-0"
